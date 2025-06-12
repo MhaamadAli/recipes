@@ -9,12 +9,13 @@ import { Recipe, RecipeFormData } from '@/lib/types';
 
 interface RecipeFormProps {
   recipe?: Recipe;                          // Optional recipe for editing (undefined = add mode)
+  suggestedData?: RecipeFormData | null;    // Optional suggested recipe data to pre-fill form
   isOpen: boolean;                          // Modal visibility state
   onClose: () => void;                      // Callback to close modal
   onSubmit: (formData: RecipeFormData) => Promise<void>;  // Callback for form submission
 }
 
-export default function RecipeForm({ recipe, isOpen, onClose, onSubmit }: RecipeFormProps) {
+export default function RecipeForm({ recipe, suggestedData, isOpen, onClose, onSubmit }: RecipeFormProps) {
   // Form state
   const [formData, setFormData] = useState<RecipeFormData>({
     name: '',
@@ -37,7 +38,7 @@ export default function RecipeForm({ recipe, isOpen, onClose, onSubmit }: Recipe
     'French', 'Thai', 'Mediterranean', 'American', 'Other'
   ];
 
-  // Initialize form data when recipe prop changes (edit mode)
+  // Initialize form data when recipe prop changes (edit mode) or suggestedData changes
   useEffect(() => {
     if (recipe) {
       // Convert recipe back to form format
@@ -51,6 +52,9 @@ export default function RecipeForm({ recipe, isOpen, onClose, onSubmit }: Recipe
         difficulty: recipe.metadata.difficulty,
         tags: recipe.metadata.tags.join(', ')
       });
+    } else if (suggestedData) {
+      // Use suggested recipe data
+      setFormData(suggestedData);
     } else {
       // Reset form for add mode
       setFormData({
@@ -65,7 +69,7 @@ export default function RecipeForm({ recipe, isOpen, onClose, onSubmit }: Recipe
       });
     }
     setErrors({});
-  }, [recipe]);
+  }, [recipe, suggestedData]);
 
   // Form validation
   const validateForm = (): boolean => {
@@ -147,7 +151,7 @@ export default function RecipeForm({ recipe, isOpen, onClose, onSubmit }: Recipe
         {/* Modal Header */}
         <div className="flex justify-between items-center p-6 border-b">
           <h2 className="text-2xl font-bold text-gray-800">
-            {recipe ? 'Edit Recipe' : 'Add New Recipe'}
+            {recipe ? 'Edit Recipe' : suggestedData ? 'Review AI Suggested Recipe' : 'Add New Recipe'}
           </h2>
           <button
             onClick={handleClose}
@@ -169,7 +173,7 @@ export default function RecipeForm({ recipe, isOpen, onClose, onSubmit }: Recipe
               type="text"
               value={formData.name}
               onChange={(e) => handleChange('name', e.target.value)}
-              className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${
+              className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900 ${
                 errors.name ? 'border-red-500' : 'border-gray-300'
               }`}
               placeholder="e.g., Spaghetti Carbonara"
@@ -186,7 +190,7 @@ export default function RecipeForm({ recipe, isOpen, onClose, onSubmit }: Recipe
               value={formData.ingredients}
               onChange={(e) => handleChange('ingredients', e.target.value)}
               rows={4}
-              className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${
+              className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900 ${
                 errors.ingredients ? 'border-red-500' : 'border-gray-300'
               }`}
               placeholder="e.g., 400g spaghetti, 200g pancetta, 4 eggs, 100g parmesan"
@@ -203,7 +207,7 @@ export default function RecipeForm({ recipe, isOpen, onClose, onSubmit }: Recipe
               value={formData.instructions}
               onChange={(e) => handleChange('instructions', e.target.value)}
               rows={6}
-              className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${
+              className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900 ${
                 errors.instructions ? 'border-red-500' : 'border-gray-300'
               }`}
               placeholder="e.g., Cook spaghetti in salted water until al dente&#10;Fry pancetta until crispy&#10;Beat eggs with parmesan and pepper"
@@ -221,7 +225,7 @@ export default function RecipeForm({ recipe, isOpen, onClose, onSubmit }: Recipe
               <select
                 value={formData.cuisineType}
                 onChange={(e) => handleChange('cuisineType', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${
+                className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900 ${
                   errors.cuisineType ? 'border-red-500' : 'border-gray-300'
                 }`}
               >
@@ -241,7 +245,7 @@ export default function RecipeForm({ recipe, isOpen, onClose, onSubmit }: Recipe
               <select
                 value={formData.difficulty}
                 onChange={(e) => handleChange('difficulty', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900"
               >
                 <option value="Easy">Easy</option>
                 <option value="Medium">Medium</option>
@@ -263,7 +267,7 @@ export default function RecipeForm({ recipe, isOpen, onClose, onSubmit }: Recipe
                 max="500"
                 value={formData.preparationTime}
                 onChange={(e) => handleChange('preparationTime', parseInt(e.target.value) || 0)}
-                className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${
+                className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900 ${
                   errors.preparationTime ? 'border-red-500' : 'border-gray-300'
                 }`}
               />
@@ -281,7 +285,7 @@ export default function RecipeForm({ recipe, isOpen, onClose, onSubmit }: Recipe
                 max="20"
                 value={formData.servings}
                 onChange={(e) => handleChange('servings', parseInt(e.target.value) || 0)}
-                className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${
+                className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900 ${
                   errors.servings ? 'border-red-500' : 'border-gray-300'
                 }`}
               />
@@ -298,7 +302,7 @@ export default function RecipeForm({ recipe, isOpen, onClose, onSubmit }: Recipe
               type="text"
               value={formData.tags}
               onChange={(e) => handleChange('tags', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900"
               placeholder="e.g., vegetarian, quick, comfort-food"
             />
           </div>
@@ -325,7 +329,7 @@ export default function RecipeForm({ recipe, isOpen, onClose, onSubmit }: Recipe
               disabled={isSubmitting}
               className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isSubmitting ? 'Saving...' : (recipe ? 'Update Recipe' : 'Add Recipe')}
+              {isSubmitting ? 'Saving...' : (recipe ? 'Update Recipe' : suggestedData ? 'Save AI Recipe' : 'Add Recipe')}
             </button>
           </div>
         </form>

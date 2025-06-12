@@ -32,6 +32,7 @@ export default function RecipeSuggestions({ onSelectRecipe, onClose, isOpen }: R
   const [suggestions, setSuggestions] = useState<SuggestedRecipe[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [aiSource, setAiSource] = useState<string>(''); // Track if using real AI or fallback
 
   // Generate AI recipe suggestions
   const generateSuggestions = async () => {
@@ -57,6 +58,10 @@ export default function RecipeSuggestions({ onSelectRecipe, onClose, isOpen }: R
 
       if (result.success) {
         setSuggestions(result.data);
+        setAiSource(result.source || 'fallback');
+        if (result.note) {
+          console.log('Note:', result.note);
+        }
       } else {
         setError(result.error || 'Failed to generate suggestions');
       }
@@ -95,6 +100,7 @@ export default function RecipeSuggestions({ onSelectRecipe, onClose, isOpen }: R
     setPreferences('');
     setSuggestions([]);
     setError(null);
+    setAiSource('');
     onClose();
   };
 
@@ -180,9 +186,20 @@ export default function RecipeSuggestions({ onSelectRecipe, onClose, isOpen }: R
         <div className="p-6">
           {suggestions.length > 0 && (
             <>
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                Suggested Recipes ({suggestions.length})
-              </h3>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-gray-800">
+                  Suggested Recipes ({suggestions.length})
+                </h3>
+                {aiSource && (
+                  <span className={`text-xs px-2 py-1 rounded ${
+                    aiSource === 'openai' 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {aiSource === 'openai' ? '🤖 AI Generated' : '⚡ Quick Suggestions'}
+                  </span>
+                )}
+              </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {suggestions.map((suggestion, index) => (

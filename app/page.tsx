@@ -1,5 +1,5 @@
 // app/page.tsx
-// Main dashboard page that combines all components
+// Main dashboard page that combines all components including AI features
 // Handles state management and API calls
 
 'use client';
@@ -9,6 +9,7 @@ import { Recipe, RecipeFormData, SearchFilters, RecipeStatus } from '@/lib/types
 import SearchBar from '@/components/SearchBar';
 import RecipeCard from '@/components/RecipeCard';
 import RecipeForm from '@/components/RecipeForm';
+import RecipeSuggestions from '@/components/RecipeSuggestions';
 
 export default function HomePage() {
   // State management
@@ -20,6 +21,8 @@ export default function HomePage() {
   // Modal state
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState<Recipe | undefined>(undefined);
+  const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false);
+  const [suggestedFormData, setSuggestedFormData] = useState<RecipeFormData | null>(null);
 
   // Search state
   const [activeFilters, setActiveFilters] = useState<SearchFilters>({ query: '' });
@@ -93,15 +96,29 @@ export default function HomePage() {
     setActiveFilters(filters);
   };
 
+  // Open AI suggestions modal
+  const handleOpenSuggestions = () => {
+    setIsSuggestionsOpen(true);
+  };
+
+  // Handle suggested recipe selection
+  const handleSelectSuggestedRecipe = (formData: RecipeFormData) => {
+    setSuggestedFormData(formData);
+    setEditingRecipe(undefined);
+    setIsFormOpen(true);
+  };
+
   // Open form for adding new recipe
   const handleAddRecipe = () => {
     setEditingRecipe(undefined);
+    setSuggestedFormData(null);
     setIsFormOpen(true);
   };
 
   // Open form for editing existing recipe
   const handleEditRecipe = (recipe: Recipe) => {
     setEditingRecipe(recipe);
+    setSuggestedFormData(null);
     setIsFormOpen(true);
   };
 
@@ -109,12 +126,30 @@ export default function HomePage() {
   const handleCloseForm = () => {
     setIsFormOpen(false);
     setEditingRecipe(undefined);
+    setSuggestedFormData(null);
   };
 
   // Submit form (add or edit)
   const handleSubmitForm = async (formData: RecipeFormData) => {
     try {
-      if (editingRecipe) {
+      const isNewRecipe = !editingRecipe;
+      
+      if (isNewRecipe) {
+        // Create new recipe
+        const response = await fetch('/api/recipes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData)
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          // Add new recipe to local state
+          setRecipes(prev => [result.data, ...prev]);
+        } else {
+          throw new Error(result.error);
+        }
+      } else {
         // Update existing recipe
         const response = await fetch(`/api/recipes?id=${editingRecipe.id}`, {
           method: 'PUT',
@@ -128,21 +163,6 @@ export default function HomePage() {
           setRecipes(prev => prev.map(r => 
             r.id === editingRecipe.id ? result.data : r
           ));
-        } else {
-          throw new Error(result.error);
-        }
-      } else {
-        // Create new recipe
-        const response = await fetch('/api/recipes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData)
-        });
-
-        const result = await response.json();
-        if (result.success) {
-          // Add new recipe to local state
-          setRecipes(prev => [result.data, ...prev]);
         } else {
           throw new Error(result.error);
         }
@@ -214,20 +234,29 @@ export default function HomePage() {
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">My Recipe Collection</h1>
               <p className="text-gray-600 mt-1">
-                Manage your favorite recipes with ease
+                Manage your favorite recipes with AI-powered suggestions
               </p>
             </div>
-            <button
-              onClick={handleAddRecipe}
-              className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2"
-            >
-              <span className="text-xl">+</span>
-              Add Recipe
-            </button>
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+              <button
+                onClick={handleOpenSuggestions}
+                className="bg-purple-500 hover:bg-purple-600 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+              >
+                <span className="text-xl">🤖</span>
+                AI Suggestions
+              </button>
+              <button
+                onClick={handleAddRecipe}
+                className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+              >
+                <span className="text-xl">+</span>
+                Add Recipe
+              </button>
+            </div>
           </div>
 
           {/* Recipe Summary */}
@@ -286,7 +315,7 @@ export default function HomePage() {
         {!loading && !error && (
           <>
             {/* Results Info */}
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
               <p className="text-gray-600">
                 Showing {filteredRecipes.length} of {recipes.length} recipes
               </p>
@@ -320,20 +349,32 @@ export default function HomePage() {
                 <h3 className="text-xl font-medium text-gray-600 mb-2">
                   {recipes.length === 0 ? 'No recipes yet' : 'No recipes match your filters'}
                 </h3>
-                <p className="text-gray-500 mb-4">
+                <p className="text-gray-500 mb-6">
                   {recipes.length === 0 
-                    ? 'Start building your recipe collection by adding your first recipe!'
+                    ? 'Start building your recipe collection by adding your first recipe or try our AI suggestions!'
                     : 'Try adjusting your search criteria or clearing the filters.'
                   }
                 </p>
-                {recipes.length === 0 && (
-                  <button
-                    onClick={handleAddRecipe}
-                    className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium"
-                  >
-                    Add Your First Recipe
-                  </button>
-                )}
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  {recipes.length === 0 && (
+                    <>
+                      <button
+                        onClick={handleOpenSuggestions}
+                        className="bg-purple-500 hover:bg-purple-600 text-white px-6 py-3 rounded-lg font-medium flex items-center justify-center gap-2"
+                      >
+                        <span className="text-xl">🤖</span>
+                        Get AI Recipe Suggestions
+                      </button>
+                      <button
+                        onClick={handleAddRecipe}
+                        className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium flex items-center justify-center gap-2"
+                      >
+                        <span className="text-xl">+</span>
+                        Add Your First Recipe
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
             )}
           </>
@@ -343,9 +384,17 @@ export default function HomePage() {
       {/* Recipe Form Modal */}
       <RecipeForm
         recipe={editingRecipe}
+        suggestedData={suggestedFormData}
         isOpen={isFormOpen}
         onClose={handleCloseForm}
         onSubmit={handleSubmitForm}
+      />
+
+      {/* AI Recipe Suggestions Modal */}
+      <RecipeSuggestions
+        isOpen={isSuggestionsOpen}
+        onClose={() => setIsSuggestionsOpen(false)}
+        onSelectRecipe={handleSelectSuggestedRecipe}
       />
     </div>
   );
